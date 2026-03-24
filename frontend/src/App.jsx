@@ -1,43 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import CampaignCard from './components/CampaignCard';
 import DonationModal from './components/DonationModal';
 
 function App() {
-  // This state tracks which campaign is currently selected for donation. 
-  // If it's null, the modal is closed.
   const [selectedCampaign, setSelectedCampaign] = useState(null);
+  
+  // Create an empty state to hold the data from the database
+  const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const campaigns = [
-    {
-      id: 1,
-      title: "Provide Clean Water to Families in Garissa",
-      charity: "Ummah Relief Kenya",
-      raised: 450000,
-      goal: 1000000,
-      daysLeft: 12,
-      imageColor: "bg-blue-900"
-    },
-    {
-      id: 2,
-      title: "Sponsor Orphan Education in Kibera",
-      charity: "Elimu Foundation",
-      raised: 120000,
-      goal: 500000,
-      daysLeft: 28,
-      imageColor: "bg-amber-700"
-    },
-    {
-      id: 3,
-      title: "Emergency Food Parcels for Ramadan",
-      charity: "Kenyan Zakat Fund",
-      raised: 890000,
-      goal: 900000,
-      daysLeft: 5,
-      imageColor: "bg-emerald-800"
-    }
-  ];
+  // This hook runs automatically when the page loads to fetch the data
+  useEffect(() => {
+    fetch('http://127.0.0.1:5000/api/campaigns')
+      .then(response => response.json())
+      .then(data => {
+        setCampaigns(data);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error("Error fetching campaigns:", error);
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 relative">
@@ -49,19 +35,22 @@ function App() {
           Featured fundraisers
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {campaigns.map(campaign => (
-            <CampaignCard
-              key={campaign.id}
-              {...campaign}
-              // When clicked, we tell the app to set this specific campaign as the active one
-              onDonate={() => setSelectedCampaign(campaign)}
-            />
-          ))}
-        </div>
+        {/* Show a loading message while waiting for the Flask backend */}
+        {loading ? (
+          <p className="text-center text-gray-500 py-10">Loading campaigns from the database...</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {campaigns.map(campaign => (
+              <CampaignCard
+                key={campaign.id}
+                {...campaign}
+                onDonate={() => setSelectedCampaign(campaign)}
+              />
+            ))}
+          </div>
+        )}
       </main>
 
-      {/* The Modal. It will only render if selectedCampaign is NOT null */}
       <DonationModal 
         campaign={selectedCampaign} 
         onClose={() => setSelectedCampaign(null)} 
