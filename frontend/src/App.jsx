@@ -13,7 +13,7 @@ function App() {
 
   // This hook runs automatically when the page loads to fetch the data
   useEffect(() => {
-    fetch('http://127.0.0.1:5000/api/campaigns')
+    fetch('http://127.0.0.1:5555/api/campaigns')
       .then(response => response.json())
       .then(data => {
         setCampaigns(data);
