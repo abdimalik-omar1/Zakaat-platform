@@ -30,8 +30,9 @@ dummy_campaigns = [
 ]
 
 with app.app_context():
-    print("Clearing old data...")
-    db.session.query(Campaign).delete() # Clears the table so we don't get duplicates
+    print("Resetting database tables...")
+    db.drop_all()     # Wipes the old tables completely
+    db.create_all()   # Rebuilds them fresh with the new columns
     
     print("Adding Kenyan campaigns to the database...")
     for data in dummy_campaigns:

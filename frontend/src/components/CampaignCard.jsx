@@ -1,36 +1,52 @@
-// 1. Add onDonate to the props up here
-export default function CampaignCard({ title, charity, raised, goal, daysLeft, imageColor, onDonate }) {
-  const progress = Math.min((raised / goal) * 100, 100);
+export default function CampaignCard({ campaign, onDonateClick }) {
+  // Calculate the percentage for the progress bar (cap it at 100%)
+  const progressPercent = Math.min((campaign.raised / campaign.goal) * 100, 100);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition flex flex-col">
-      <div className={`h-48 w-full ${imageColor} flex items-center justify-center text-white/50 font-medium`}>
-        [ Campaign Image ]
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col h-full transform hover:-translate-y-1">
+      
+      {/* Image Section (Using a solid color fallback if no image exists) */}
+      <div className={`h-48 w-full relative overflow-hidden bg-${campaign.imageColor}-100`}>
+        {/* We use a placeholder pattern here, but this is where charity photos will go */}
+        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-gray-900 via-transparent to-transparent"></div>
+        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-gray-700 shadow-sm">
+          {campaign.daysLeft} Days Left
+        </div>
       </div>
 
-      <div className="p-5 flex flex-col flex-grow">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center text-[10px]">🏢</span>
-          <p className="text-xs text-gray-500 font-medium">{charity}</p>
+      {/* Content Section */}
+      <div className="p-6 flex flex-col flex-grow">
+        <div className="text-xs font-bold text-emerald-600 mb-2 uppercase tracking-wide">
+          {campaign.charity}
         </div>
-        <h3 className="font-bold text-gray-900 mb-4 line-clamp-2 h-12 leading-snug">{title}</h3>
+        <h3 className="text-xl font-bold text-gray-900 leading-tight mb-4 line-clamp-2">
+          {campaign.title}
+        </h3>
 
-        <div className="flex justify-between text-xs text-gray-500 mb-2 mt-auto">
-          <span className="font-medium text-teal-700">KES {raised.toLocaleString()} raised</span>
-          <span>{daysLeft} days left</span>
+        {/* Progress Bar */}
+        <div className="mt-auto">
+          <div className="flex justify-between text-sm font-semibold mb-2">
+            <span className="text-gray-900">KES {campaign.raised.toLocaleString()}</span>
+            <span className="text-gray-500">of KES {campaign.goal.toLocaleString()}</span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-3 mb-6 overflow-hidden">
+            <div 
+              className="bg-emerald-500 h-3 rounded-full transition-all duration-1000 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            ></div>
+          </div>
+
+          {/* Action Button */}
+          <button 
+            onClick={() => onDonateClick(campaign)}
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl transition-colors shadow-md flex justify-center items-center gap-2"
+          >
+            <span>Donate Now</span>
+            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </button>
         </div>
-
-        <div className="w-full bg-gray-100 rounded-full h-1.5 mb-5">
-          <div className="bg-green-500 h-1.5 rounded-full transition-all duration-1000" style={{ width: `${progress}%` }}></div>
-        </div>
-
-        {/* 2. Update this button to trigger the onDonate function */}
-        <button 
-          onClick={onDonate} 
-          className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg transition"
-        >
-          Donate
-        </button>
       </div>
     </div>
   );

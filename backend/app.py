@@ -8,7 +8,11 @@ app = Flask(__name__)
 # This tells Flask to allow React to talk to it
 CORS(app)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost/zakat_db')
+db_url = os.environ.get('DATABASE_URL', 'postgresql://localhost/zakat_db')
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -36,20 +40,17 @@ def get_campaigns():
         })
     return jsonify(campaign_list)
 
-# Notice we added 'OPTIONS' here so the browser's security check passes
+
 @app.route('/api/donate', methods=['POST', 'OPTIONS'])
 def process_donation():
-    # If the browser is just doing its security check, politely say yes and stop here.
     if request.method == 'OPTIONS':
         return jsonify({"message": "CORS preflight successful"}), 200
         
-    # Otherwise, process the actual donation
     data = request.json
     amount = data.get('amount')
     phone = data.get('phone')
     campaign_id = data.get('campaignId')
 
-    # Format the phone number to M-Pesa's standard
     if phone.startswith('0'):
         phone = '254' + phone[1:]
     elif phone.startswith('+'):
@@ -61,59 +62,101 @@ def process_donation():
     mpesa_response = trigger_stk_push(phone, amount)
 
     if mpesa_response and mpesa_response.get('ResponseCode') == '0':
+        checkout_request_id = mpesa_response.get('CheckoutRequestID')
+        
+        new_donation = Donation(
+            campaign_id=campaign_id,
+            phone_number=phone,
+            amount=amount,
+            checkout_request_id=checkout_request_id,
+            status='Pending'
+        )
+        db.session.add(new_donation)
+        db.session.commit()
+        
         return jsonify({
             "status": "success", 
-            "message": "STK Push sent! Please enter your PIN on your phone."
+            "message": "STK Push sent!",
+            "ticket": checkout_request_id
         })
     else:
         return jsonify({
             "status": "error", 
             "message": "Failed to reach Safaricom. Please try again."
         }), 400
+        
 
 @app.route('/api/mpesa/callback', methods=['POST'])
 def mpesa_callback():
     callback_data = request.json
-    
-    # Navigate through Safaricom's nested JSON structure
     stk_callback = callback_data.get('Body', {}).get('stkCallback', {})
+    
     result_code = stk_callback.get('ResultCode')
+    checkout_request_id = stk_callback.get('CheckoutRequestID') # The Ticket returns!
     
     print("\n" + "="*50)
     
+    # 1. Look up the pending donation using the ticket
+    donation = Donation.query.filter_by(checkout_request_id=checkout_request_id).first()
+    
+    if not donation:
+        print(f"❌ Error: Received receipt for unknown ticket {checkout_request_id}")
+        return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
+
     if result_code == 0:
-        # ResultCode 0 means the user typed their PIN and had enough money!
+        # 2. Payment succeeded! Grab the receipt number
         metadata_items = stk_callback.get('CallbackMetadata', {}).get('Item', [])
-        
-        amount = 0
         receipt_number = ""
-        phone = ""
         
-        # Loop through the data array to find the values we want
         for item in metadata_items:
-            if item.get('Name') == 'Amount':
-                amount = item.get('Value')
-            elif item.get('Name') == 'MpesaReceiptNumber':
+            if item.get('Name') == 'MpesaReceiptNumber':
                 receipt_number = item.get('Value')
-            elif item.get('Name') == 'PhoneNumber':
-                phone = item.get('Value')
                 
         print(f"✅ PAYMENT SUCCESSFUL!")
-        print(f"Amount: KES {amount}")
-        print(f"Receipt: {receipt_number}")
-        print(f"Phone: {phone}")
+        print(f"Ticket: {checkout_request_id} -> Receipt: {receipt_number}")
         
-        # TODO: Save this exact data to the PostgreSQL Database
+        # 3. Update the donation record in the database
+        donation.status = 'Completed'
+        donation.mpesa_receipt_number = receipt_number
+        
+        # 4. Find the charity and increase their total raised!
+        campaign = Campaign.query.get(donation.campaign_id)
+        if campaign:
+            campaign.raised += donation.amount
+            print(f"🎉 Updated {campaign.charity} - Total Raised is now KES {campaign.raised}")
+            
+        db.session.commit()
         
     else:
-        # ResultCode wasn't 0 (e.g., user cancelled, or timeout)
+        # Payment Failed (timeout, insufficient funds, etc.)
         error_desc = stk_callback.get('ResultDesc')
         print(f"❌ PAYMENT FAILED: {error_desc}")
+        donation.status = 'Failed'
+        db.session.commit()
         
     print("="*50 + "\n")
-    
-    # Always return this exact success message to Safaricom, or they will keep pinging you
     return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
+
+
+@app.route('/api/admin/donations', methods=['GET'])
+def get_all_donations():
+    # We query both tables at the same time so we can match the donation to the charity name
+    query_results = db.session.query(Donation, Campaign).join(Campaign).order_by(Donation.created_at.desc()).all()
+    
+    ledger = []
+    for donation, campaign in query_results:
+        ledger.append({
+            "id": donation.id,
+            "charity": campaign.charity,
+            # Mask the phone number for privacy (e.g., 254708***149)
+            "phone": f"{donation.phone_number[:6]}***{donation.phone_number[-3:]}",
+            "amount": donation.amount,
+            "receipt": donation.mpesa_receipt_number or "N/A",
+            "status": donation.status,
+            "date": donation.created_at.strftime("%Y-%m-%d %H:%M")
+        })
+        
+    return jsonify(ledger)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5555)
