@@ -4,6 +4,8 @@ import CampaignCard from "./components/CampaignCard";
 import CreateCampaignModal from "./components/CreateCampaignModal";
 import DonationModal from "./components/DonationModal";
 import AdminDashboard from "./components/AdminDashboard";
+import AuthModal from "./components/AuthModal";
+import Toast from "./components/Toast";
 
 export default function App() {
   // --- State Management ---
@@ -12,6 +14,15 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [user, setUser] = useState(localStorage.getItem("userName") || null);
+  const [isAdmin, setIsAdmin] = useState(
+    localStorage.getItem("isAdmin") === "true",
+  );
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const [startIndex, setStartIndex] = useState(0);
+  const CAMPAIGNS_PER_PAGE = 3;
 
   // This state controls which page is currently visible
   const [currentView, setCurrentView] = useState("home");
@@ -39,7 +50,19 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       {/* 1. The Top Navigation (We pass setCurrentView so the buttons work) */}
-      <Navbar setView={setCurrentView} />
+      <Navbar
+        setView={setCurrentView}
+        user={user}
+        isAdmin={isAdmin}
+        onLoginClick={() => setIsAuthModalOpen(true)}
+        onLogout={() => {
+          localStorage.removeItem("token");
+          localStorage.removeItem("userName");
+          localStorage.removeItem("isAdmin");
+          setUser(null);
+          setIsAdmin(false);
+        }}
+      />
 
       {/* 2. Conditional Rendering: Show Admin OR Home based on state */}
       {currentView === "admin" ? (
@@ -57,7 +80,9 @@ export default function App() {
               of your Zakat reaches those in need.
             </p>
             <button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() =>
+                user ? setIsCreateModalOpen(true) : setIsAuthModalOpen(true)
+              }
               className="mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl transition-colors"
             >
               + Start a Campaign
@@ -70,15 +95,72 @@ export default function App() {
               Loading active campaigns...
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {campaigns.map((campaign) => (
-                <CampaignCard
-                  key={campaign.id}
-                  campaign={campaign}
-                  onDonateClick={handleDonateClick}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {campaigns
+                  .slice(startIndex, startIndex + CAMPAIGNS_PER_PAGE)
+                  .map((campaign) => (
+                    <div key={campaign.id} className="flex">
+                      <CampaignCard
+                        campaign={campaign}
+                        onDonateClick={handleDonateClick}
+                      />
+                    </div>
+                  ))}
+              </div>
+
+              {/* Navigation */}
+              <div className="flex items-center justify-center gap-6 mt-12">
+                <button
+                  onClick={() => setStartIndex((i) => i - 1)}
+                  disabled={startIndex === 0}
+                  className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:border-emerald-500 hover:text-emerald-600 hover:shadow-md disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:text-gray-400 disabled:hover:shadow-none transition-all duration-200"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                </button>
+
+                <p className="text-sm text-gray-400 font-medium">
+                  {Math.min(startIndex + 1, campaigns.length)}–
+                  {Math.min(startIndex + CAMPAIGNS_PER_PAGE, campaigns.length)}
+                  <span className="mx-1 text-gray-300">/</span>
+                  {campaigns.length}
+                </p>
+
+                <button
+                  onClick={() => setStartIndex((i) => i + 1)}
+                  disabled={startIndex + CAMPAIGNS_PER_PAGE >= campaigns.length}
+                  className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:border-emerald-500 hover:text-emerald-600 hover:shadow-md disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:text-gray-400 disabled:hover:shadow-none transition-all duration-200"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </>
           )}
         </main>
       )}
@@ -99,8 +181,20 @@ export default function App() {
               .then((res) => res.json())
               .then((data) => setCampaigns(data));
           }}
+          showToast={setToast}
         />
       )}
+
+      {isAuthModalOpen && (
+        <AuthModal
+          onClose={() => setIsAuthModalOpen(false)}
+          onAuthSuccess={(name, adminStatus) => {
+            setUser(name);
+            setIsAdmin(adminStatus);
+          }}
+        />
+      )}
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }

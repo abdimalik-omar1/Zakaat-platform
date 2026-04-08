@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-export default function CreateCampaignModal({ onClose, onCampaignCreated }) {
+export default function CreateCampaignModal({
+  onClose,
+  onCampaignCreated,
+  showToast,
+}) {
   const [form, setForm] = useState({
     title: "",
     charity: "",
@@ -24,7 +28,10 @@ export default function CreateCampaignModal({ onClose, onCampaignCreated }) {
     try {
       const res = await fetch("http://127.0.0.1:5555/api/campaigns", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
         body: JSON.stringify({
           ...form,
           goal: parseFloat(form.goal),
@@ -32,6 +39,9 @@ export default function CreateCampaignModal({ onClose, onCampaignCreated }) {
         }),
       });
       if (res.ok) {
+        showToast(
+          "Your campaign has been submitted for review. It will appear once approved!",
+        );
         onCampaignCreated();
         onClose();
       } else {

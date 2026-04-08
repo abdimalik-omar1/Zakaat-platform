@@ -6,10 +6,11 @@ export default function CampaignCard({ campaign, onDonateClick }) {
   );
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col h-full transform hover:-translate-y-1">
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col h-full w-full transform hover:-translate-y-1">
       {/* Image Section (Using a solid color fallback if no image exists) */}
       <div
-        className={`h-48 w-full relative overflow-hidden bg-${campaign.imageColor}-100`}
+        className="h-48 w-full relative overflow-hidden"
+        style={{ backgroundColor: campaign.imageColor + "33" }}
       >
         {/* We use a placeholder pattern here, but this is where charity photos will go */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-gray-900 via-transparent to-transparent">
@@ -21,8 +22,8 @@ export default function CampaignCard({ campaign, onDonateClick }) {
       </div>
 
       {/* Content Section */}
-      <div className="p-6 flex flex-col flex-grow">
-        <div className="text-xs font-bold text-emerald-600 mb-2 uppercase tracking-wide">
+      <div className="p-6 flex flex-col flex-grow min-h-[220px]">
+        <div className="text-xs font-bold text-emerald-600 mb-2 uppercase tracking-wide truncate">
           {campaign.charity}
         </div>
         <h3 className="text-xl font-bold text-gray-900 leading-tight mb-4 line-clamp-2">
