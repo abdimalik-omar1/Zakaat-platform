@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
 import CampaignCard from "./components/CampaignCard";
+import CreateCampaignModal from "./components/CreateCampaignModal";
 import DonationModal from "./components/DonationModal";
 import AdminDashboard from "./components/AdminDashboard";
 
@@ -10,9 +11,10 @@ export default function App() {
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // This state controls which page is currently visible
-  const [currentView, setCurrentView] = useState("admin");
+  const [currentView, setCurrentView] = useState("home");
 
   // --- Data Fetching ---
   useEffect(() => {
@@ -54,6 +56,12 @@ export default function App() {
               Directly support verified campaigns across Kenya via M-Pesa. 100%
               of your Zakat reaches those in need.
             </p>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl transition-colors"
+            >
+              + Start a Campaign
+            </button>
           </div>
 
           {/* The Campaigns Grid */}
@@ -80,6 +88,17 @@ export default function App() {
         <DonationModal
           campaign={selectedCampaign}
           onClose={() => setIsModalOpen(false)}
+        />
+      )}
+
+      {isCreateModalOpen && (
+        <CreateCampaignModal
+          onClose={() => setIsCreateModalOpen(false)}
+          onCampaignCreated={() => {
+            fetch("http://127.0.0.1:5555/api/campaigns")
+              .then((res) => res.json())
+              .then((data) => setCampaigns(data));
+          }}
         />
       )}
     </div>

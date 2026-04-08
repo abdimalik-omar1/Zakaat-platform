@@ -1,8 +1,11 @@
+from dotenv import load_dotenv
+import os
+load_dotenv()
+# print("DB URL:", os.environ.get('DATABASE_URL'))
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from models import db, Campaign, Donation
 from mpesa import trigger_stk_push
-import os
 
 app = Flask(__name__)
 # This tells Flask to allow React to talk to it
@@ -23,6 +26,21 @@ with app.app_context():
 @app.route('/api/status', methods=['GET'])
 def get_status():
     return jsonify({"message": "Zakat platform backend is running!", "status": "success"})
+
+@app.route('/api/campaigns', methods=['POST'])
+def create_campaign():
+    data = request.json
+    new_campaign = Campaign(
+        title=data['title'],
+        charity=data['charity'],
+        goal=data['goal'],
+        raised=0,
+        days_left=data['daysLeft'],
+        image_color=data.get('imageColor', '#10b981')
+    )
+    db.session.add(new_campaign)
+    db.session.commit()
+    return jsonify({"message": "Campaign created!", "id": new_campaign.id}), 201
 
 @app.route('/api/campaigns', methods=['GET'])
 def get_campaigns():

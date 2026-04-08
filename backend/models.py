@@ -16,6 +16,20 @@ class Campaign(db.Model):
     # This links the campaigns to their donations
     donations = db.relationship('Donation', backref='campaign', lazy=True)
 
+def to_dict(self):
+    """Convert campaign to dictionary for JSON response"""
+    return {
+        'id': self.id,
+        'title': self.title,
+        'charity': self.charity,
+        'goal': self.goal,
+        'raised': self.raised,
+        'daysLeft': self.days_left,
+        'imageColor': self.image_color,
+        'createdAt': self.created_at.isoformat() if self.created_at else None,
+        'progress': round((self.raised / self.goal * 100) if self.goal > 0 else 0, 2)
+    }
+
 class Donation(db.Model):
     __tablename__ = 'donations'
     id = db.Column(db.Integer, primary_key=True)

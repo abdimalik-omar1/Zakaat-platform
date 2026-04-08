@@ -144,7 +144,7 @@ export default function DonationModal({ campaign, onClose }) {
           <>
             <div className="mb-6">
               <h2 className="text-2xl font-extrabold text-gray-900 mb-1">
-                Give Zakat
+                Fund Khayr
               </h2>
               <p className="text-sm text-emerald-600 font-bold uppercase tracking-wide">
                 {campaign.charity}
