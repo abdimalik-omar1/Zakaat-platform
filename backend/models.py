@@ -12,9 +12,24 @@ class Campaign(db.Model):
     raised = db.Column(db.Float, default=0.0)
     days_left = db.Column(db.Integer, nullable=False)
     image_color = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(20), default='pending')
     
     # This links the campaigns to their donations
     donations = db.relationship('Donation', backref='campaign', lazy=True)
+
+def to_dict(self):
+    """Convert campaign to dictionary for JSON response"""
+    return {
+        'id': self.id,
+        'title': self.title,
+        'charity': self.charity,
+        'goal': self.goal,
+        'raised': self.raised,
+        'daysLeft': self.days_left,
+        'imageColor': self.image_color,
+        'createdAt': self.created_at.isoformat() if self.created_at else None,
+        'progress': round((self.raised / self.goal * 100) if self.goal > 0 else 0, 2)
+    }
 
 class Donation(db.Model):
     __tablename__ = 'donations'
@@ -30,3 +45,11 @@ class Donation(db.Model):
     
     status = db.Column(db.String(20), default='Pending') # Pending, Completed, Failed
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)

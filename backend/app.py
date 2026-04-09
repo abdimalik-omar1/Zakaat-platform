@@ -1,11 +1,16 @@
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from models import db, Campaign, Donation
+from models import db, Campaign, Donation, User
 from mpesa import trigger_stk_push
-import os
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_jwt_extended import verify_jwt_in_request
 
 app = Flask(__name__)
-# This tells Flask to allow React to talk to it
 CORS(app)
 
 db_url = os.environ.get('DATABASE_URL', 'postgresql://localhost/zakat_db')
@@ -14,19 +19,82 @@ if db_url.startswith("postgres://"):
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'super-secret-key-change-in-production')
 
 db.init_app(app)
+jwt = JWTManager(app)
 
 with app.app_context():
     db.create_all()
+
+def admin_required():
+    verify_jwt_in_request()
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin:
+        from flask import abort
+        abort(403)
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
     return jsonify({"message": "Zakat platform backend is running!", "status": "success"})
 
+@app.route('/api/register', methods=['POST'])
+def register():
+    data = request.json
+    if User.query.filter_by(email=data['email']).first():
+        return jsonify({"message": "Email already registered."}), 409
+    
+    invite_code = data.get('inviteCode', '')
+    is_admin = invite_code == os.environ.get('ADMIN_INVITE_CODE', '')
+
+    new_user = User(
+        name=data['name'],
+        email=data['email'],
+        password_hash=generate_password_hash(data['password']),
+        is_admin=is_admin
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    token = create_access_token(identity=str(new_user.id))
+    return jsonify({"token": token, "name": new_user.name, "isAdmin": new_user.is_admin}), 201
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    user = User.query.filter_by(email=data['email']).first()
+    if not user or not check_password_hash(user.password_hash, data['password']):
+        return jsonify({"message": "Invalid email or password."}), 401
+    token = create_access_token(identity=str(user.id))
+    return jsonify({"token": token, "name": user.name, "isAdmin": user.is_admin}), 200
+
+@app.route('/api/me', methods=['GET'])
+@jwt_required()
+def get_me():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    return jsonify({"name": user.name, "email": user.email})
+
+@app.route('/api/campaigns', methods=['POST'])
+@jwt_required()
+def create_campaign():
+    data = request.json
+    new_campaign = Campaign(
+        title=data['title'],
+        charity=data['charity'],
+        goal=data['goal'],
+        raised=0,
+        days_left=data['daysLeft'],
+        image_color=data.get('imageColor', '#10b981'),
+        status='pending'
+    )
+    db.session.add(new_campaign)
+    db.session.commit()
+    return jsonify({"message": "Campaign submitted for review!", "id": new_campaign.id}), 201
+
 @app.route('/api/campaigns', methods=['GET'])
 def get_campaigns():
-    campaigns = Campaign.query.all()
+    campaigns = Campaign.query.filter_by(status='approved').all()
     campaign_list = []
     for c in campaigns:
         campaign_list.append({
@@ -40,6 +108,30 @@ def get_campaigns():
         })
     return jsonify(campaign_list)
 
+@app.route('/api/admin/campaigns/pending', methods=['GET'])
+def get_pending_campaigns():
+    admin_required()
+    campaigns = Campaign.query.filter_by(status='pending').all()
+    return jsonify([{
+        "id": c.id,
+        "title": c.title,
+        "charity": c.charity,
+        "goal": c.goal,
+        "daysLeft": c.days_left,
+        "imageColor": c.image_color
+    } for c in campaigns])
+
+@app.route('/api/admin/campaigns/<int:campaign_id>/review', methods=['POST'])
+def review_campaign(campaign_id):
+    admin_required()
+    data = request.json
+    action = data.get('action')
+    if action not in ['approved', 'rejected']:
+        return jsonify({"message": "Invalid action."}), 400
+    campaign = Campaign.query.get_or_404(campaign_id)
+    campaign.status = action
+    db.session.commit()
+    return jsonify({"message": f"Campaign {action}."})
 
 @app.route('/api/donate', methods=['POST', 'OPTIONS'])
 def process_donation():
@@ -140,6 +232,7 @@ def mpesa_callback():
 
 @app.route('/api/admin/donations', methods=['GET'])
 def get_all_donations():
+    admin_required()
     # We query both tables at the same time so we can match the donation to the charity name
     query_results = db.session.query(Donation, Campaign).join(Campaign).order_by(Donation.created_at.desc()).all()
     
