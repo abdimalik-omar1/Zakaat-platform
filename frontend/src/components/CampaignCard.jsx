@@ -6,7 +6,7 @@ export default function CampaignCard({ campaign, onDonateClick }) {
   );
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col h-full w-full transform hover:-translate-y-1">
+    <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col h-full w-full transform hover:-translate-y-1">
       {/* Image Section (Using a solid color fallback if no image exists) */}
       <div
         className="h-48 w-full relative overflow-hidden"
@@ -26,21 +26,21 @@ export default function CampaignCard({ campaign, onDonateClick }) {
         <div className="text-xs font-bold text-emerald-600 mb-2 uppercase tracking-wide truncate">
           {campaign.charity}
         </div>
-        <h3 className="text-xl font-bold text-gray-900 leading-tight mb-4 line-clamp-2">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight mb-4 line-clamp-2">
           {campaign.title}
         </h3>
 
         {/* Progress Bar */}
         <div className="mt-auto">
           <div className="flex justify-between text-sm font-semibold mb-2">
-            <span className="text-gray-900">
+            <span className="text-gray-900 dark:text-gray-400">
               KES {campaign.raised.toLocaleString()}
             </span>
-            <span className="text-gray-500">
+            <span className="text-gray-500 dark:text-gray-400">
               of KES {campaign.goal.toLocaleString()}
             </span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-3 mb-6 overflow-hidden">
+          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 mb-6 overflow-hidden">
             <div
               className="bg-emerald-500 h-3 rounded-full transition-all duration-1000 ease-out"
               style={{ width: `${progressPercent}%` }}
@@ -50,7 +50,7 @@ export default function CampaignCard({ campaign, onDonateClick }) {
           {/* Action Button */}
           <button
             onClick={() => onDonateClick(campaign)}
-            className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl transition-colors shadow-md flex justify-center items-center gap-2 cursor-pointer"
+            className="w-full bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-white font-bold py-3.5 rounded-xl transition-colors shadow-md flex justify-center items-center gap-2 cursor-pointer"
           >
             <span>Donate Now</span>
             <svg

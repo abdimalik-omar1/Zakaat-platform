@@ -27,6 +27,26 @@ export default function App() {
   // This state controls which page is currently visible
   const [currentView, setCurrentView] = useState("home");
 
+  const [darkMode, setDarkMode] = useState(
+    localStorage.getItem("darkMode") === "true",
+  );
+
+  if (localStorage.getItem("darkMode") === "true") {
+    document.documentElement.classList.add("dark");
+  }
+
+  const toggleDarkMode = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    if (newMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("darkMode", "true");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("darkMode", "false");
+    }
+  };
+
   // --- Data Fetching ---
   useEffect(() => {
     fetch("http://127.0.0.1:5555/api/campaigns")
@@ -48,13 +68,15 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 font-sans">
       {/* 1. The Top Navigation (We pass setCurrentView so the buttons work) */}
       <Navbar
         setView={setCurrentView}
         user={user}
         isAdmin={isAdmin}
         onLoginClick={() => setIsAuthModalOpen(true)}
+        darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
         onLogout={() => {
           localStorage.removeItem("token");
           localStorage.removeItem("userName");
@@ -71,7 +93,7 @@ export default function App() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {/* The Hero Section */}
           <div className="text-center mb-16 animate-fade-in-up">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-4 tracking-tight">
               Purify your wealth with{" "}
               <span className="text-emerald-600">purpose.</span>
             </h1>

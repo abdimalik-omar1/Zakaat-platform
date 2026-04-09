@@ -48,7 +48,7 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-fade-in-up">
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-900">
+        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-400">
           Admin Dashboard
         </h1>
         <p className="text-gray-500 mt-2">
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
 
       {/* Donations Tab */}
       {activeTab === "donations" && (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
           {loadingDonations ? (
             <div className="p-12 text-center text-gray-500 animate-pulse font-medium">
               Loading ledger data...
@@ -96,7 +96,7 @@ export default function AdminDashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-bold">
+                  <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold">
                     <th className="p-5">Date</th>
                     <th className="p-5">Charity</th>
                     <th className="p-5">Donor Phone</th>
@@ -109,21 +109,21 @@ export default function AdminDashboard() {
                   {donations.map((tx) => (
                     <tr
                       key={tx.id}
-                      className="hover:bg-gray-50/50 transition-colors"
+                      className="hover:bg-gray-50/10 transition-colors"
                     >
                       <td className="p-5 text-gray-500 font-medium">
                         {tx.date}
                       </td>
-                      <td className="p-5 font-bold text-gray-900">
+                      <td className="p-5 font-bold text-gray-900 dark:text-gray-400">
                         {tx.charity}
                       </td>
-                      <td className="p-5 font-mono text-gray-600">
+                      <td className="p-5 font-mono text-gray-600 dark:text-gray-400">
                         {tx.phone}
                       </td>
                       <td className="p-5 font-bold text-emerald-600">
                         KES {tx.amount.toLocaleString()}
                       </td>
-                      <td className="p-5 font-mono text-gray-500">
+                      <td className="p-5 font-mono text-gray-500 dark:text-gray-400">
                         {tx.receipt}
                       </td>
                       <td className="p-5">
