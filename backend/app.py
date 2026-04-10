@@ -9,6 +9,8 @@ from mpesa import trigger_stk_push
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import verify_jwt_in_request
+import csv
+import io
 
 app = Flask(__name__)
 CORS(app)
@@ -133,6 +135,22 @@ def review_campaign(campaign_id):
     db.session.commit()
     return jsonify({"message": f"Campaign {action}."})
 
+@app.route('/api/campaigns/<int:campaign_id>/donors', methods=['GET'])
+def get_campaign_donors(campaign_id):
+    donations = Donation.query.filter_by(
+        campaign_id=campaign_id,
+        status='Completed'
+    ).order_by(Donation.created_at.desc()).all()
+    
+    donors = []
+    for d in donations:
+        donors.append({
+            "amount": d.amount,
+            "date": d.created_at.strftime("%b %d, %Y"),
+            "name": d.donor_name if d.donor_name else "Anonymous"
+        })
+    return jsonify(donors)
+
 @app.route('/api/donate', methods=['POST', 'OPTIONS'])
 def process_donation():
     if request.method == 'OPTIONS':
@@ -142,6 +160,7 @@ def process_donation():
     amount = data.get('amount')
     phone = data.get('phone')
     campaign_id = data.get('campaignId')
+    donor_name = data.get('donorName', None)
 
     if phone.startswith('0'):
         phone = '254' + phone[1:]
@@ -150,18 +169,20 @@ def process_donation():
 
     print(f"Initiating KES {amount} donation from {phone} for campaign {campaign_id}")
 
-    # Fire the engine!
-    mpesa_response = trigger_stk_push(phone, amount)
+    mpesa_response = trigger_stk_push(phone, int(amount) + int(tip))
 
     if mpesa_response and mpesa_response.get('ResponseCode') == '0':
         checkout_request_id = mpesa_response.get('CheckoutRequestID')
-        
+        tip = data.get('tip', 0)
+
         new_donation = Donation(
             campaign_id=campaign_id,
             phone_number=phone,
             amount=amount,
+            tip=tip,
             checkout_request_id=checkout_request_id,
-            status='Pending'
+            status='Pending',
+            donor_name=donor_name
         )
         db.session.add(new_donation)
         db.session.commit()
@@ -177,6 +198,15 @@ def process_donation():
             "message": "Failed to reach Safaricom. Please try again."
         }), 400
         
+@app.route('/api/donate/status/<ticket_id>', methods=['GET'])
+def get_donation_status(ticket_id):
+    donation = Donation.query.filter_by(checkout_request_id=ticket_id).first()
+    if not donation:
+        return jsonify({"status": "Pending"})
+    return jsonify({
+        "status": donation.status,
+        "receipt": donation.mpesa_receipt_number or ""
+    })
 
 @app.route('/api/mpesa/callback', methods=['POST'])
 def mpesa_callback():
@@ -241,15 +271,43 @@ def get_all_donations():
         ledger.append({
             "id": donation.id,
             "charity": campaign.charity,
-            # Mask the phone number for privacy (e.g., 254708***149)
             "phone": f"{donation.phone_number[:6]}***{donation.phone_number[-3:]}",
             "amount": donation.amount,
+            "tip": float(donation.tip) if donation.tip else 0,
             "receipt": donation.mpesa_receipt_number or "N/A",
             "status": donation.status,
-            "date": donation.created_at.strftime("%Y-%m-%d %H:%M")
-        })
+            "date": donation.created_at.strftime("%d/%m/%Y %H:%M") if donation.created_at else "N/A",
+    })
         
     return jsonify(ledger)
+
+@app.route('/api/admin/donations/export/csv', methods=['GET'])
+def export_donations_csv():
+    admin_required()
+    query_results = db.session.query(Donation, Campaign).join(Campaign).order_by(Donation.created_at.desc()).all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Date', 'Charity', 'Phone', 'Amount (KES)', 'Receipt', 'Status'])
+    
+    for donation, campaign in query_results:
+        writer.writerow([
+            donation.id,
+            donation.created_at.strftime("%Y-%m-%d %H:%M") if donation.created_at else "N/A",
+            campaign.charity,
+            f"{donation.phone_number[:6]}***{donation.phone_number[-3:]}",
+            donation.amount,
+            donation.mpesa_receipt_number or "N/A",
+            donation.status
+        ])
+    
+    output.seek(0)
+    from flask import Response
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={"Content-Disposition": "attachment;filename=donations.csv"}
+    )
 
 if __name__ == '__main__':
     app.run(debug=True, port=5555)

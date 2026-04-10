@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-export default function DonationModal({ campaign, onClose }) {
+export default function DonationModal({ campaign, onClose, user }) {
   const [amount, setAmount] = useState("");
   const [phone, setPhone] = useState("");
   const [status, setStatus] = useState("idle"); // idle, loading, polling, success, failed
@@ -12,9 +12,12 @@ export default function DonationModal({ campaign, onClose }) {
   // This is the Radar: It pings Flask every 3 seconds while "polling"
   useEffect(() => {
     let intervalId;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 20; // Poll for ~2 minutes
 
     if (status === "polling" && ticketId) {
       intervalId = setInterval(async () => {
+        attempts++;
         try {
           const res = await fetch(
             `http://127.0.0.1:5555/api/donate/status/${ticketId}`,
@@ -24,18 +27,19 @@ export default function DonationModal({ campaign, onClose }) {
           if (data.status === "Completed") {
             setReceipt(data.receipt);
             setStatus("success");
-            clearInterval(intervalId); // Stop the radar
-          } else if (data.status === "Failed") {
+            clearInterval(intervalId);
+          } else if (data.status === "Failed" && attempts >= MAX_ATTEMPTS) {
             setStatus("failed");
-            clearInterval(intervalId); // Stop the radar
+            clearInterval(intervalId);
           }
+          // If Failed but attempts < MAX_ATTEMPTS, keep polling
         } catch (error) {
           console.error("Polling error", error);
         }
-      }, 3000); // Check every 3 seconds
+      }, 10000); // Check every 5 seconds
     }
 
-    return () => clearInterval(intervalId); // Cleanup when modal closes
+    return () => clearInterval(intervalId);
   }, [status, ticketId]);
 
   const handleSubmit = async (e) => {
@@ -46,7 +50,12 @@ export default function DonationModal({ campaign, onClose }) {
       const response = await fetch("http://127.0.0.1:5555/api/donate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, phone, campaignId: campaign.id }),
+        body: JSON.stringify({
+          amount,
+          phone,
+          campaignId: campaign.id,
+          donorName: user || null,
+        }),
       });
 
       const data = await response.json();
@@ -64,7 +73,7 @@ export default function DonationModal({ campaign, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-gray-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 relative overflow-hidden animate-fade-in-up">
+      <div className="bg-white dark:bg-gray-900/70 rounded-3xl shadow-2xl max-w-md w-full p-6 relative overflow-hidden animate-fade-in-up">
         {/* Close Button */}
         {status !== "polling" && (
           <button
@@ -143,7 +152,7 @@ export default function DonationModal({ campaign, onClose }) {
         ) : (
           <>
             <div className="mb-6">
-              <h2 className="text-2xl font-extrabold text-gray-900 mb-1">
+              <h2 className="text-2xl font-extrabold text-gray-900 dark:text-gray-400 mb-1">
                 Fund Khayr
               </h2>
               <p className="text-sm text-emerald-600 font-bold uppercase tracking-wide">
@@ -153,7 +162,7 @@ export default function DonationModal({ campaign, onClose }) {
 
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                   Amount (KES)
                 </label>
                 <div className="relative">
@@ -173,7 +182,7 @@ export default function DonationModal({ campaign, onClose }) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                   M-Pesa Number
                 </label>
                 <input
@@ -182,18 +191,16 @@ export default function DonationModal({ campaign, onClose }) {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="07XX XXX XXX"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white font-medium transition-all"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-1 dark:focus:ring-emarald-500 focus:bg-white font-medium transition-all"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={status === "loading"}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold text-lg py-4 rounded-xl transition-all shadow-lg shadow-emerald-200 mt-2"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold text-lg py-4 rounded-xl transition-all shadow-lg shadow-emerald-200 mt-2 cursor-pointer"
               >
-                {status === "loading"
-                  ? "Connecting..."
-                  : "Pay via M-Pesa Express"}
+                {status === "loading" ? "Connecting..." : "Pay via M-Pesa"}
               </button>
             </form>
           </>

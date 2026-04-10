@@ -1,4 +1,8 @@
-export default function CampaignCard({ campaign, onDonateClick }) {
+export default function CampaignCard({
+  campaign,
+  onDonateClick,
+  onSeeDonorsClick,
+}) {
   // Calculate the percentage for the progress bar (cap it at 100%)
   const progressPercent = Math.min(
     (campaign.raised / campaign.goal) * 100,
@@ -40,17 +44,22 @@ export default function CampaignCard({ campaign, onDonateClick }) {
               of KES {campaign.goal.toLocaleString()}
             </span>
           </div>
-          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 mb-6 overflow-hidden">
+          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1 mb-3 overflow-hidden">
             <div
-              className="bg-emerald-500 h-3 rounded-full transition-all duration-1000 ease-out"
+              className="bg-emerald-500 h-1 rounded-full transition-all duration-1000 ease-out"
               style={{ width: `${progressPercent}%` }}
             ></div>
           </div>
-
+          <button
+            onClick={() => onSeeDonorsClick(campaign)}
+            className="w-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-500 hover:text-emerald-600 font-bold py-1 rounded-xl transition-colors mb-3 text-sm"
+          >
+            See Donors
+          </button>
           {/* Action Button */}
           <button
             onClick={() => onDonateClick(campaign)}
-            className="w-full bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-white font-bold py-3.5 rounded-xl transition-colors shadow-md flex justify-center items-center gap-2 cursor-pointer"
+            className="w-full bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-white font-bold py-2.5 rounded-xl transition-colors shadow-md flex justify-center items-center gap-2 cursor-pointer"
           >
             <span>Donate Now</span>
             <svg

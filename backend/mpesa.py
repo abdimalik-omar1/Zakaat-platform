@@ -52,7 +52,7 @@ def trigger_stk_push(phone_number, amount):
         "PartyB": shortcode,
         "PhoneNumber": phone_number,
         # This is where Safaricom will send the receipt after the user types their PIN. 
-        "CallBackURL": "https://overkeenly-subcorneous-charmain.ngrok-free.dev/api/mpesa/callback", 
+        "CallBackURL": "https://f545-95-219-237-97.ngrok-free.app/api/mpesa/callback", 
         "AccountReference": "Zakat Platform",
         "TransactionDesc": "Donation"
     }

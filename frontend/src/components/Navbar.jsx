@@ -34,18 +34,18 @@ export default function Navbar({
             >
               Campaigns
             </button>
-            <a
-              href="#"
+            <button
+              onClick={() => setView("how-it-works")}
               className="text-gray-600 dark:text-gray-300 hover:text-emerald-600 font-medium transition cursor-pointer"
             >
               How it Works
-            </a>
-            <a
-              href="#"
+            </button>
+            <button
+              onClick={() => setView("about-us")}
               className="text-gray-600 dark:text-gray-300 hover:text-emerald-600 font-medium transition cursor-pointer"
             >
               About Us
-            </a>
+            </button>
           </div>
 
           {/* Right Side */}

@@ -1,3 +1,5 @@
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useState, useEffect } from "react";
 
 export default function AdminDashboard() {
@@ -45,15 +47,118 @@ export default function AdminDashboard() {
     fetchPending();
   };
 
+  const exportCSV = async () => {
+    const token = localStorage.getItem("token");
+    const res = await fetch(
+      "http://127.0.0.1:5555/api/admin/donations/export/csv",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "donations.csv";
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.setTextColor(5, 150, 105);
+    doc.text("GoFundKhayr — Transaction Ledger", 14, 20);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+
+    autoTable(doc, {
+      startY: 35,
+      head: [["Date", "Charity", "Phone", "Amount (KES)", "Receipt", "Status"]],
+      body: donations.map((tx) => [
+        tx.date,
+        tx.charity,
+        tx.phone,
+        `KES ${tx.amount.toLocaleString()}`,
+        tx.receipt,
+        tx.status,
+      ]),
+      headStyles: {
+        fillColor: [5, 150, 105],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      alternateRowStyles: {
+        fillColor: [240, 253, 244],
+      },
+      styles: {
+        fontSize: 9,
+        cellPadding: 4,
+      },
+    });
+
+    doc.save("donations.pdf");
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-fade-in-up">
-      <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-400">
-          Admin Dashboard
-        </h1>
-        <p className="text-gray-500 mt-2">
-          Manage campaigns and view transaction history.
-        </p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">
+            Admin Dashboard
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">
+            Manage campaigns and view transaction history.
+          </p>
+        </div>
+
+        {activeTab === "donations" && donations.length > 0 && (
+          <div className="flex gap-3">
+            <button
+              onClick={exportCSV}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-500 hover:text-emerald-600 font-bold rounded-xl text-sm transition-all"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              CSV
+            </button>
+            <button
+              onClick={exportPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-all"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              PDF
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
