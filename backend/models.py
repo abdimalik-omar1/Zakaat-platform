@@ -37,6 +37,7 @@ class Donation(db.Model):
     campaign_id = db.Column(db.Integer, db.ForeignKey('campaigns.id'), nullable=False)
     phone_number = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Float, nullable=False)
+    tip = db.Column(db.Numeric, default=0)
     
     # The Coat Check Ticket (From the STK Push)
     checkout_request_id = db.Column(db.String(100), unique=True, nullable=False) 
@@ -46,6 +47,7 @@ class Donation(db.Model):
     status = db.Column(db.String(20), default='Pending') # Pending, Completed, Failed
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     donor_name = db.Column(db.String(100), nullable=True)
+    
 
 class User(db.Model):
     __tablename__ = 'users'

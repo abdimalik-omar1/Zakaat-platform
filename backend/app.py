@@ -169,15 +169,17 @@ def process_donation():
 
     print(f"Initiating KES {amount} donation from {phone} for campaign {campaign_id}")
 
-    mpesa_response = trigger_stk_push(phone, amount)
+    mpesa_response = trigger_stk_push(phone, int(amount) + int(tip))
 
     if mpesa_response and mpesa_response.get('ResponseCode') == '0':
         checkout_request_id = mpesa_response.get('CheckoutRequestID')
-        
+        tip = data.get('tip', 0)
+
         new_donation = Donation(
             campaign_id=campaign_id,
             phone_number=phone,
             amount=amount,
+            tip=tip,
             checkout_request_id=checkout_request_id,
             status='Pending',
             donor_name=donor_name
@@ -269,13 +271,13 @@ def get_all_donations():
         ledger.append({
             "id": donation.id,
             "charity": campaign.charity,
-            # Mask the phone number for privacy (e.g., 254708***149)
             "phone": f"{donation.phone_number[:6]}***{donation.phone_number[-3:]}",
             "amount": donation.amount,
+            "tip": float(donation.tip) if donation.tip else 0,
             "receipt": donation.mpesa_receipt_number or "N/A",
             "status": donation.status,
-            "date": donation.created_at.strftime("%Y-%m-%d %H:%M") if donation.created_at else "N/A",
-        })
+            "date": donation.created_at.strftime("%d/%m/%Y %H:%M") if donation.created_at else "N/A",
+    })
         
     return jsonify(ledger)
 
