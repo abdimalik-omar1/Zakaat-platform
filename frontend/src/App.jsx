@@ -3,9 +3,12 @@ import Navbar from "./components/Navbar";
 import CampaignCard from "./components/CampaignCard";
 import CreateCampaignModal from "./components/CreateCampaignModal";
 import DonationModal from "./components/DonationModal";
+import HowItWorks from "./components/HowItWorks";
+import AboutUs from "./components/AboutUs";
 import AdminDashboard from "./components/AdminDashboard";
 import AuthModal from "./components/AuthModal";
 import Toast from "./components/Toast";
+import DonorWallModal from "./components/DonorWallModal";
 
 export default function App() {
   // --- State Management ---
@@ -20,6 +23,8 @@ export default function App() {
   );
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [isDonorWallOpen, setIsDonorWallOpen] = useState(false);
+  const [selectedDonorCampaign, setSelectedDonorCampaign] = useState(null);
 
   const [startIndex, setStartIndex] = useState(0);
   const CAMPAIGNS_PER_PAGE = 3;
@@ -89,17 +94,21 @@ export default function App() {
       {/* 2. Conditional Rendering: Show Admin OR Home based on state */}
       {currentView === "admin" ? (
         <AdminDashboard />
+      ) : currentView === "how-it-works" ? (
+        <HowItWorks setView={setCurrentView} />
+      ) : currentView === "about-us" ? (
+        <AboutUs setView={setCurrentView} />
       ) : (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {/* The Hero Section */}
           <div className="text-center mb-16 animate-fade-in-up">
             <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-4 tracking-tight">
-              Purify your wealth with{" "}
+              Participate in khayr with{" "}
               <span className="text-emerald-600">purpose.</span>
             </h1>
             <p className="text-lg text-gray-500 max-w-2xl mx-auto">
               Directly support verified campaigns across Kenya via M-Pesa. 100%
-              of your Zakat reaches those in need.
+              of your Sadaqah and Zakat reaches those in need.
             </p>
             <button
               onClick={() =>
@@ -107,7 +116,7 @@ export default function App() {
               }
               className="mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl transition-colors"
             >
-              + Start a Campaign
+              Start a Campaign
             </button>
           </div>
 
@@ -118,14 +127,22 @@ export default function App() {
             </div>
           ) : (
             <>
+              <h1 className="text-2xl md:text-3xl text-black dark:text-white mb-6 font-bold">
+                Fundraising Now
+              </h1>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {campaigns
                   .slice(startIndex, startIndex + CAMPAIGNS_PER_PAGE)
                   .map((campaign) => (
                     <div key={campaign.id} className="flex">
                       <CampaignCard
+                        key={campaign.id}
                         campaign={campaign}
                         onDonateClick={handleDonateClick}
+                        onSeeDonorsClick={(campaign) => {
+                          setSelectedDonorCampaign(campaign);
+                          setIsDonorWallOpen(true);
+                        }}
                       />
                     </div>
                   ))}
@@ -192,6 +209,7 @@ export default function App() {
         <DonationModal
           campaign={selectedCampaign}
           onClose={() => setIsModalOpen(false)}
+          user={user}
         />
       )}
 
@@ -217,6 +235,12 @@ export default function App() {
         />
       )}
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      {isDonorWallOpen && (
+        <DonorWallModal
+          campaign={selectedDonorCampaign}
+          onClose={() => setIsDonorWallOpen(false)}
+        />
+      )}
     </div>
   );
 }

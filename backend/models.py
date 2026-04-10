@@ -45,6 +45,7 @@ class Donation(db.Model):
     
     status = db.Column(db.String(20), default='Pending') # Pending, Completed, Failed
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    donor_name = db.Column(db.String(100), nullable=True)
 
 class User(db.Model):
     __tablename__ = 'users'
